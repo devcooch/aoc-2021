@@ -7,8 +7,6 @@ where
     let mut candidates = (0..digits[0].len()).collect::<HashSet<usize>>();
     for column in digits {
         let half = (candidates.len() as f32 / 2.0).ceil() as usize;
-        let mut to_print = candidates.iter().collect::<Vec<&usize>>();
-        to_print.sort();
         let s: usize = candidates.iter().map(|&i| column[i]).sum();
         let losers = column
             .iter()
