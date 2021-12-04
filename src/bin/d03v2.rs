@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-fn find_candidate<P>(digits: &Vec<Vec<usize>>, criteria: P) -> usize
+fn find_candidate<P>(digits: &[Vec<usize>], criteria: P) -> usize
 where
     P: Fn(usize, usize, usize) -> bool,
 {
@@ -25,7 +25,7 @@ where
     *candidates.iter().next().unwrap()
 }
 
-fn get_byte(digits: &Vec<Vec<usize>>, i: usize) -> usize {
+fn get_byte(digits: &[Vec<usize>], i: usize) -> usize {
     let mut result = 0;
     for column in digits {
         result += column[i];
