@@ -4,10 +4,9 @@ fn main() {
         .lines()
         .map(|line| {
             line.split(" | ")
-                .skip(1)
-                .next()
+                .nth(1)
                 .unwrap()
-                .split(" ")
+                .split(' ')
                 .filter(|&x| x.len() < 5 || x.len() > 6)
                 .count()
         })
