@@ -107,12 +107,10 @@ fn main() {
                 )
             })
             .collect();
-        let mut value = 0;
-        for digit in number.split_ascii_whitespace() {
-            let ds = digit.chars().sorted().join("");
-            value *= 10;
-            value += trans_digits[&ds];
-        }
+        let value = number
+            .split_ascii_whitespace()
+            .map(|digit| trans_digits[&digit.chars().sorted().join("")])
+            .fold(0, |total, digit| total * 10 + digit);
         s += value;
     }
     println!("{}", s);
