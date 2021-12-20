@@ -10,19 +10,25 @@ fn parse_x_bits(iter: &mut BitIter, x: usize) -> u32 {
 }
 
 fn parse_version(bin: &mut BitIter) -> u32 {
+    print!("V");
     parse_x_bits(bin, 3)
 }
 
 fn parse_type(bin: &mut BitIter) -> u32 {
+    print!("T");
     parse_x_bits(bin, 3)
 }
 
-fn parse_literal(bin: &mut BitIter) -> u64 {
+fn parse_literal(bin: &mut BitIter) -> (u64, usize) {
     let mut groups_read = 0;
     let mut result = 0u64;
+    let mut bits_read = 0;
     loop {
+        print!("L");
         let more_groups = bin.next().unwrap();
+        bits_read += 1;
         let hex = parse_x_bits(bin, 4);
+        bits_read += 4;
         result <<= 1;
         result |= hex as u64;
         groups_read += 1;
@@ -31,44 +37,66 @@ fn parse_literal(bin: &mut BitIter) -> u64 {
         }
     }
     assert!(groups_read <= 16);
-    result
+    (result, bits_read)
 }
 
-fn parse_size_based_packets(bin: &mut BitIter) -> u32 {
+fn parse_size_based_packets(bin: &mut BitIter) -> (u32, usize) {
     let mut result = 0;
-    let size = parse_x_bits(bin, 15);
-    result
-}
-
-fn parse_count_based_packets(bin: &mut BitIter) -> u32 {
-    let mut result = 0;
-    let count = parse_x_bits(bin, 11);
-    for _ in 1..=count {
-        result += parse_packet(bin);
+    let size = parse_x_bits(bin, 15) as usize;
+    print!("S{}", size);
+    let mut read = 15usize;
+    while read < size {
+        let (value, pack_read) = parse_packet(bin);
+        result += value;
+        read += pack_read;
     }
-    result
+    //assert!(read == size);
+    (result, read)
 }
 
-fn parse_operator(bin: &mut BitIter) -> u32 {
+fn parse_count_based_packets(bin: &mut BitIter) -> (u32, usize) {
+    let mut result = 0;
+    let mut read = 0;
+    let count = parse_x_bits(bin, 11);
+    print!("S{}", count);
+    read += 1;
+    for _ in 1..=count {
+        let (value, pack_read) = parse_packet(bin);
+        result += value;
+        read += pack_read;
+    }
+    (result, read)
+}
+
+fn parse_operator(bin: &mut BitIter) -> (u32, usize) {
     let length_type = bin.next().unwrap();
     if *length_type == 0 {
-        parse_size_based_packets(bin)
+        let (sz_sum, sz_read) = parse_size_based_packets(bin);
+        return (sz_sum, sz_read + 1);
     } else {
-        parse_count_based_packets(bin)
+        let (cnt_sum, cnt_read) = parse_count_based_packets(bin);
+        return (cnt_sum, cnt_read + 1);
     }
 }
 
-fn parse_packet(bin: &mut BitIter) -> u32 {
+fn parse_packet(bin: &mut BitIter) -> (u32, usize) {
+    print!("(");
     let mut sum = 0;
+    let mut read = 0usize;
     let version = parse_version(bin);
     let typ = parse_type(bin);
+    read += 6;
     if typ == 4 {
-        parse_literal(bin);
+        let (_, lit_read) = parse_literal(bin);
         sum += version;
+        read += lit_read
     } else {
-        sum += parse_operator(bin)
+        let (op_sum, op_read) = parse_operator(bin);
+        sum += op_sum;
+        read += op_read;
     }
-    sum
+    print!(")");
+    (sum, read)
 }
 
 fn main() {
@@ -84,6 +112,7 @@ fn main() {
         .flatten()
         .collect::<Vec<_>>();
     let mut bin = bin_vec.iter();
-    let s = parse_packet(&mut bin);
+    let (s, _) = parse_packet(&mut bin);
+    println!("");
     println!("{}", s);
 }
