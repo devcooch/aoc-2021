@@ -1,4 +1,4 @@
-use std::cmp::max;
+use std::cmp::min;
 use std::collections::HashMap;
 
 #[derive(Debug, PartialEq)]
@@ -221,7 +221,7 @@ fn main() {
                 execute_optimized(&abcd, w, &mut try_x, &mut try_z);
                 next.entry((try_x, try_z))
                     .and_modify(|e| {
-                        *e = max(*e, number);
+                        *e = min(*e, number);
                     })
                     .or_insert(number);
             }
@@ -237,92 +237,4 @@ fn main() {
             .collect::<Vec<_>>()
             .join("\n")
     );
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn execute_dumb(code: &[Command], inp: isize, x: &mut isize, z: &mut isize) {
-        let mut r = vec![0; 4];
-        r[1] = *x;
-        r[3] = *z;
-        for c in code {
-            match c.op {
-                OpCode::Inp => r[c.lh] = inp,
-                OpCode::Mul => match c.rh.typ {
-                    RHType::Num => r[c.lh] *= c.rh.value,
-                    RHType::Reg => r[c.lh] *= r[c.rh.reg],
-                },
-                OpCode::Add => match c.rh.typ {
-                    RHType::Num => r[c.lh] += c.rh.value,
-                    RHType::Reg => r[c.lh] += r[c.rh.reg],
-                },
-                OpCode::Div => match c.rh.typ {
-                    RHType::Num => r[c.lh] /= c.rh.value,
-                    RHType::Reg => r[c.lh] /= r[c.rh.reg],
-                },
-                OpCode::Mod => match c.rh.typ {
-                    RHType::Num => r[c.lh] %= c.rh.value,
-                    RHType::Reg => r[c.lh] %= r[c.rh.reg],
-                },
-                OpCode::Eql => match c.rh.typ {
-                    RHType::Num => r[c.lh] = (r[c.lh] == c.rh.value) as isize,
-                    RHType::Reg => r[c.lh] = (r[c.lh] == r[c.rh.reg]) as isize,
-                },
-            }
-        }
-        *x = r[1];
-        *z = r[3];
-    }
-
-    #[test]
-    fn test_optimized() {
-        let input = include_str!("day24.txt");
-        let code = input
-            .lines()
-            .map(|line| {
-                let mut tokens = line.split(' ');
-                let op = match tokens.next().unwrap() {
-                    "inp" => OpCode::Inp,
-                    "add" => OpCode::Add,
-                    "mul" => OpCode::Mul,
-                    "div" => OpCode::Div,
-                    "mod" => OpCode::Mod,
-                    "eql" => OpCode::Eql,
-                    _ => panic!("Unknown opcode"),
-                };
-                let lh = reg_to_ix(tokens.next().unwrap());
-                let rh = if op != OpCode::Inp {
-                    get_operand(tokens.next().unwrap())
-                } else {
-                    Operand {
-                        typ: RHType::Num,
-                        value: 0,
-                        reg: 0,
-                    }
-                };
-                Command { op, lh, rh }
-            })
-            .collect::<Vec<_>>();
-
-        let all_abcd = get_abcd(&code);
-
-        for (i, abcd) in all_abcd.iter().enumerate() {
-            for w in 1..=9 {
-                for x in 0..=1 {
-                    for z in 0..=10000 {
-                        let mut ref_x = x;
-                        let mut ref_z = z;
-                        execute_dumb(&code[(i * 18)..((i + 1) * 18)], w, &mut ref_x, &mut ref_z);
-                        let mut test_x = x;
-                        let mut test_z = z;
-                        execute_optimized(&abcd, w, &mut test_x, &mut test_z);
-                        assert_eq!(ref_x, test_x);
-                        assert_eq!(ref_z, test_z);
-                    }
-                }
-            }
-        }
-    }
 }
